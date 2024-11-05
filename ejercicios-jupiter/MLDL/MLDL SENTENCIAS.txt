@@ -1,0 +1,482 @@
+!pip install pandas
+!pip install matplotlib
+!pip install seaborn
+!pip install Leaflet
+!pip install scikit-learn
+!pip install geopandas
+!pip install geodatasets
+!pip install mlxtend
+!pip install --upgrade geopandas
+!pip install shap
+!pip install ipywidgets --upgrade
+!pip uninstall numpy -y
+!pip install numpy==1.24.0
+!pip install --upgrade shap	
+!pip install torch
+!pip install KMeans
+!pip install imblearn
+!pip install flask
+
+
+!pip install convertdate
+!pip install lunarcalendar
+!pip install holidays
+!pip install setuptools-git
+!pip install prophet
+
+
+!pip install fbprophet
+
+
+---------------------------1-------------------------------------------------------------------
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+# Cargar los datos
+data = pd.read_csv('Crimes_-_2024_20241031.csv')
+# Mostrar las primeras filas de los datos
+print(data.head())
+
+# Descripción estadística de los datos numéricos
+print(data.describe())
+
+# Distribución de características categóricas
+categorical_columns = ['Primary Type', 'Description', 'Location Description']
+for col in categorical_columns:
+    print(f"Distribución de {col}:")
+    print(data[col].value_counts())
+
+# Histograma de las características numéricas
+data.hist(figsize=(10, 8))
+plt.show()
+
+# Seleccionar solo las columnas numéricas para calcular la matriz de correlación
+numeric_data = data.select_dtypes(include=['number'])
+corr_matrix = numeric_data.corr()
+
+# Mapa de calor de la correlación
+sns.heatmap(corr_matrix, annot=True, cmap='coolwarm')
+plt.show()
+
+
+------------------------------2-----------------------------------------------------------
+el problema estaba en que solo estaba convirtiendo las tres columnas que se indican como primary type mas no el resto de columnas
+que a la final se le hace referencia y se vuelven x
+
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.model_selection import train_test_split
+
+# Limpiar los datos eliminando filas con valores nulos
+data_cleaned = data.dropna()
+
+# Convertir características categóricas a numéricas
+label_encoders = {}
+categorical_columns = ['Primary Type', 'Description', 'Location Description']
+for col in categorical_columns:
+    le = LabelEncoder()
+    data_cleaned.loc[:, col] = le.fit_transform(data_cleaned[col])
+    label_encoders[col] = le
+
+# Separar las características y el objetivo
+X = data_cleaned.drop(columns=['Arrest', 'Domestic'])
+y_arrest = data_cleaned['Arrest']
+y_domestic = data_cleaned['Domestic']
+
+# Identificar las columnas categóricas restantes en X y codificarlas
+remaining_categorical_columns = X.select_dtypes(include=['object']).columns
+for col in remaining_categorical_columns:
+    le = LabelEncoder()
+    X[col] = le.fit_transform(X[col])
+
+# Escalar características numéricas
+scaler = StandardScaler()  # Inicializar el scaler
+X_scaled = scaler.fit_transform(X)
+
+# Dividir los datos en conjuntos de entrenamiento y prueba
+X_train, X_test, y_arrest_train, y_arrest_test = train_test_split(X_scaled, y_arrest, test_size=0.2, random_state=42)
+X_train, X_test, y_domestic_train, y_domestic_test = train_test_split(X_scaled, y_domestic, test_size=0.2, random_state=42)
+
+---------------------------------3-------------------------------
+
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report
+# Entrenar un modelo de clasificación de Random Forest
+clf = RandomForestClassifier(random_state=42)
+clf.fit(X_train, y_arrest_train)
+# Predecir en el conjunto de prueba
+y_pred = clf.predict(X_test)
+# Informar de clasificación
+print(classification_report(y_arrest_test, y_pred))
+
+--------------------4----------------------
+
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+# Entrenar un modelo de regresión de Random Forest
+reg_latitude = RandomForestRegressor(random_state=42)
+reg_longitude = RandomForestRegressor(random_state=42)
+# Separar el objetivo de regresión
+y_latitude = data_cleaned['Latitude']
+y_longitude = data_cleaned['Longitude']
+# Dividir los datos
+X_train_lat, X_test_lat, y_train_lat, y_test_lat = train_test_split(X_scaled, y_latitude, test_size=0.2, random_state=42)
+X_train_long, X_test_long, y_train_long, y_test_long = train_test_split(X_scaled, y_longitude, test_size=0.2, random_state=42)
+# Entrenar modelos
+reg_latitude.fit(X_train_lat, y_train_lat)
+reg_longitude.fit(X_train_long, y_train_long)
+# Predecir y evaluar los modelos
+y_pred_lat = reg_latitude.predict(X_test_lat)
+y_pred_long = reg_longitude.predict(X_test_long)
+print("MAE Latitud:", mean_absolute_error(y_test_lat, y_pred_lat))
+print("MSE Latitud:", mean_squared_error(y_test_lat, y_pred_lat))
+print("MAE Longitud:", mean_absolute_error(y_test_long, y_pred_long))
+print("MSE Longitud:", mean_squared_error(y_test_long, y_pred_long))
+
+
+--------------------5-------------------------------
+
+import matplotlib.pyplot as plt
+import pandas as pd
+
+# Convertir la columna de fecha a tipo datetime con el formato específico
+data['Date'] = pd.to_datetime(data['Date'], format='%m/%d/%Y %I:%M:%S %p')
+
+# Agrupar datos por fecha y contar ocurrencias
+time_series = data.groupby(data['Date'].dt.date).size()
+
+# Graficar la serie temporal
+plt.figure(figsize=(12, 6))
+plt.plot(time_series)
+plt.title("Ocurrencias a lo largo del tiempo")
+plt.xlabel("Fecha")
+plt.ylabel("Número de ocurrencias")
+plt.show()
+
+
+--------------------6------------------------------------
+
+
+import pandas as pd
+import geopandas as gpd
+import matplotlib.pyplot as plt
+
+# Cargar tus datos desde un archivo CSV
+data = pd.read_csv('/home/jovyan/work/Crimes_-_2024_20241031.csv')  # Asegúrate de que la ruta sea correcta
+
+# Crear un GeoDataFrame a partir de los datos
+gdf = gpd.GeoDataFrame(data, geometry=gpd.points_from_xy(data['Longitude'], data['Latitude']))
+
+# Cargar el mapa del mundo
+world = gpd.read_file('/home/jovyan/work/ne_110m_admin_0_countries.shp')
+
+
+# Crear el gráfico
+ax = world.boundary.plot(figsize=(12, 8))
+gdf.plot(ax=ax, marker='o', color='red', markersize=5)
+plt.title("Ocurrencias geográficas")
+plt.show()
+
+--------------------------7 ------------------
+
+from sklearn.ensemble import IsolationForest
+# Entrenar un modelo de Isolation Forest
+iso_forest = IsolationForest(random_state=42)
+iso_forest.fit(X_train)
+# Predecir anomalías en el conjunto de prueba
+y_pred_anomaly = iso_forest.predict(X_test)
+# Contar el número de anomalías
+num_anomalies = sum(y_pred_anomaly == -1)
+print(f"Número de anomalías: {num_anomalies}")
+
+--------------------8-----------------------------------
+from mlxtend.frequent_patterns import apriori, association_rules
+# Convertir los datos categóricos a formato de conjuntos
+categorical_columns = ['Primary Type', 'Description', 'Location Description']
+data_categorical = data[categorical_columns]
+data_categorical_one_hot = pd.get_dummies(data_categorical)
+# Aplicar el algoritmo de Apriori
+frequent_itemsets = apriori(data_categorical_one_hot, min_support=0.05, use_colnames=True)
+# Extraer reglas de asociación
+rules = association_rules(frequent_itemsets, metric='lift', min_threshold=1.2)
+print(rules)
+
+-----------------------9------------------------------
+
+
+
+
+import pandas as pd
+data = pd.read_csv('Crimes_-_2024_20241031.csv')  # Ajusta el nombre del archivo según corresponda
+print(data.head())  # Verifica las primeras filas del DataFrame original
+print(data.shape)   # Verifica las dimensiones del DataFrame original
+
+data['Location Description'] = data['Location Description'].fillna('Unknown')
+
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.model_selection import train_test_split
+
+# Limpiar los datos eliminando filas con valores nulos
+data_cleaned = data.dropna()
+
+print(data.head())  # Verifica las primeras filas del DataFrame original
+
+# Convertir características categóricas a numéricas
+categorical_columns = ['Primary Type', 'Description', 'Location Description']
+label_encoders = {}
+for col in categorical_columns:
+    le = LabelEncoder()
+    data_cleaned.loc[:, col] = le.fit_transform(data_cleaned[col])
+    label_encoders[col] = le
+
+# Separar las características y el objetivo
+X = data_cleaned.drop(columns=['Arrest', 'Domestic', 'Case Number', 'Domestic', 'Date', 'Block', 'Updated On', 'Location', 'IUCR', 'FBI Code'])
+y_arrest = data_cleaned['Arrest']
+y_domestic = data_cleaned['Domestic']
+
+# Escalar características numéricas
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# Dividir los datos en conjuntos de entrenamiento y prueba
+X_train, X_test, y_arrest_train, y_arrest_test = train_test_split(X_scaled, y_arrest, test_size=0.2,
+random_state=42)
+X_train, X_test, y_domestic_train, y_domestic_test = train_test_split(X_scaled, y_domestic,
+test_size=0.2, random_state=42)
+
+print(X_scaled[:5])
+
+#Aqui empieza la 9
+
+!pip install numpy
+!pip install numba
+!pip install shap
+
+import numpy
+import numba
+import shap
+
+print(numpy.__version__)
+print(numba.__version__)
+print(shap.__version__)
+
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report
+
+clf = RandomForestClassifier(n_estimators=10, random_state=42)  # Usar solo 10 árboles
+clf.fit(X_train, y_arrest_train)
+
+# Calcular valores SHAP usando KernelExplainer para rapidez
+explainer = shap.KernelExplainer(clf.predict, X_train[:100])  # Usar solo una muestra pequeña para inicializar
+X_test_df = pd.DataFrame(X_test, columns=X.columns)  # Mantener los nombres originales de las columnas
+X_test_sample = X_test_df.sample(n=1000, random_state=42)  # Toma una muestra de 1000 filas para acelerar el proceso
+
+shap_values = explainer.shap_values(X_test_sample)
+
+# Visualizar la importancia de las características
+shap.summary_plot(shap_values, X_test_sample, plot_type='bar')
+
+
+----------------------------10----------------------------
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from sklearn.preprocessing import StandardScaler
+
+# Definir la red neuronal
+class Net(nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+        self.fc1 = nn.Linear(X_train.shape[1], 64)
+        self.fc2 = nn.Linear(64, 1)
+        
+    def forward(self, x):
+        x = torch.relu(self.fc1(x))
+        x = torch.sigmoid(self.fc2(x))
+        return x
+
+# Convertir los datos a tensores
+X_train_torch = torch.tensor(X_train, dtype=torch.float32)
+y_domestic_train_torch = torch.tensor(y_domestic_train.values, dtype=torch.float32)
+X_test_torch = torch.tensor(X_test, dtype=torch.float32)
+y_domestic_test_torch = torch.tensor(y_domestic_test.values, dtype=torch.float32)
+
+# Crear la red y definir la función de pérdida y el optimizador
+net = Net()
+criterion = nn.BCELoss()
+optimizer = optim.Adam(net.parameters(), lr=0.001)
+
+# Entrenar la red neuronal
+num_epochs = 100
+for epoch in range(num_epochs):
+    net.train()
+    optimizer.zero_grad()
+    outputs = net(X_train_torch)
+    loss = criterion(outputs, y_domestic_train_torch.view(-1, 1))
+    loss.backward()
+    optimizer.step()
+    if epoch % 10 == 0:
+        print(f"Epoch {epoch + 1}, Loss: {loss.item()}")
+
+# Evaluar la red neuronal
+net.eval()
+with torch.no_grad():
+    outputs_test = net(X_test_torch)
+    outputs_test = outputs_test.view(-1).round()
+    accuracy = (outputs_test == y_domestic_test_torch).float().mean()
+    print(f"Accuracy: {accuracy.item()}")
+	
+----------------------------11-----------------------------
+
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report
+
+# Usar solo una muestra de 1000 filas para acelerar el proceso
+X_train_sample = X_train[:1000]
+y_arrest_train_sample = y_arrest_train[:1000]
+
+# Modelos de clasificación
+models = {
+    'Random Forest': RandomForestClassifier(n_estimators=10, random_state=42),
+    'SVM': SVC(),
+    'Logistic Regression': LogisticRegression(max_iter=100, random_state=42)
+}
+
+# Entrenar y evaluar los modelos
+for model_name, model in models.items():
+    model.fit(X_train_sample, y_arrest_train_sample)
+    y_pred = model.predict(X_test)
+    print(f"--- {model_name} ---")
+    print(classification_report(y_arrest_test, y_pred, zero_division=1))
+
+	
+----------------------------12----------------------------
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
+import matplotlib.pyplot as plt
+# Reducción de dimensionalidad con PCA
+pca = PCA(n_components=2)
+X_pca = pca.fit_transform(X_scaled)
+# Clustering con KMeans
+kmeans = KMeans(n_clusters=5, random_state=42)
+clusters = kmeans.fit_predict(X_pca)
+# Visualizar los clusters
+plt.scatter(X_pca[:, 0], X_pca[:, 1], c=clusters, cmap='viridis')
+plt.title('Clusters KMeans')
+plt.show()
+
+----------------------------13-----------------
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Filtrar solo columnas numéricas
+data_numeric = data.select_dtypes(include=[float, int])
+
+# Calcular matriz de correlación
+corr_matrix = data_numeric.corr()
+
+# Visualizar la matriz de correlación
+plt.figure(figsize=(12, 8))
+sns.heatmap(corr_matrix, annot=True, cmap='coolwarm')
+plt.title("Matriz de correlación")
+plt.show()
+
+------------------------------14----------------
+from imblearn.over_sampling import SMOTE
+# Manejar el desequilibrio de datos en 'ARREST'
+smote = SMOTE(random_state=42)
+X_resampled, y_arrest_resampled = smote.fit_resample(X_train, y_arrest_train)
+# Entrenar un modelo de clasificación de Random Forest con datos reequilibrados
+clf = RandomForestClassifier(random_state=42)
+clf.fit(X_resampled, y_arrest_resampled)
+# Evaluar el modelo
+y_pred = clf.predict(X_test)
+print(classification_report(y_arrest_test, y_pred))
+
+-----------------------------15--------------------------------
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report
+# Entrenar un modelo de árbol de decisión
+dtree = DecisionTreeClassifier(random_state=42)
+dtree.fit(X_train, y_arrest_train)
+# Entrenar un modelo de bosque aleatorio
+rforest = RandomForestClassifier(random_state=42)
+rforest.fit(X_train, y_arrest_train)
+# Evaluar el árbol de decisión
+y_pred_tree = dtree.predict(X_test)
+print("Clasificación con Árbol de Decisión:")
+print(classification_report(y_arrest_test, y_pred_tree))
+# Evaluar el bosque aleatorio
+y_pred_forest = rforest.predict(X_test)
+print("Clasificación con Bosque Aleatorio:")
+print(classification_report(y_arrest_test, y_pred_forest))
+
+------------------------------16------------------------
+
+------------------------------17----------------------
+from sklearn.decomposition import PCA
+import matplotlib.pyplot as plt
+
+# Asegurarse de que no hay valores faltantes en 'Arrest'
+data = data.dropna(subset=['Arrest'])
+
+# Redefinir X_scaled para que tenga los mismos índices que 'data'
+X_scaled = X_scaled[data.index.values[:len(X_scaled)]]
+
+# Reducción de dimensionalidad con PCA
+pca = PCA(n_components=2)
+X_pca = pca.fit_transform(X_scaled)
+
+# Asegurarse de que 'data' también esté alineado con 'X_scaled'
+data = data.iloc[:len(X_scaled)]
+
+# Visualizar los datos reducidos
+plt.scatter(X_pca[:, 0], X_pca[:, 1], c=data['Arrest'].apply(lambda x: 0 if x == 'N' else 1), cmap='coolwarm')
+plt.title('Reducción de dimensionalidad con PCA')
+plt.xlabel('Componente principal 1')
+plt.ylabel('Componente principal 2')
+plt.show()
+
+---------------------------18-------------------------
+
+--------------------------19----------------------
+
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report
+from sklearn.model_selection import GridSearchCV
+from tqdm import tqdm
+import numpy as np
+
+# Generar datos de ejemplo
+X, y = make_classification(n_samples=1000, n_features=20, n_classes=2, random_state=42)
+
+# Dividir los datos en conjuntos de entrenamiento y prueba
+X_train, X_test, y_arrest_train, y_arrest_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Definir el modelo
+clf = RandomForestClassifier(random_state=42)
+
+# Definir los hiperparámetros a optimizar
+param_grid = {
+    'n_estimators': [100, 200, 300],
+    'max_depth': [None, 10, 20, 30],
+    'min_samples_split': [2, 5, 10]
+}
+
+# Optimización de hiperparámetros con GridSearchCV
+grid_search = GridSearchCV(clf, param_grid, cv=5, scoring='accuracy', verbose=1)
+grid_search.fit(X_train, y_arrest_train)
+
+# Mostrar los mejores hiperparámetros
+print("Mejores hiperparámetros:", grid_search.best_params_)
+
+# Evaluar el modelo con los mejores hiperparámetros
+y_pred = grid_search.best_estimator_.predict(X_test)
+print(classification_report(y_arrest_test, y_pred))
+
+
+------------------------20-----------------------
