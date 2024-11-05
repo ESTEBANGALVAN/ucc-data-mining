@@ -1,0 +1,417 @@
+!pip install numpy
+!pip install numba
+!pip install shap
+!pip install pandas
+!pip install matplotlib
+!pip install tensorflow
+
+
+------------------------------1-------------------------------
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense, Input
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+
+# Cargar los datos
+data = pd.read_csv('Crimes_-_2024_20241031.csv')
+
+# Preprocesamiento de datos
+data['Date'] = pd.to_datetime(data['Date'], format='%m/%d/%Y %I:%M:%S %p')
+data = data.sort_values(by='Date')
+data['HOUR'] = data['Date'].dt.hour
+data['DAY_OF_WEEK'] = data['Date'].dt.dayofweek
+data['MONTH'] = data['Date'].dt.month
+
+# Seleccionar características y etiquetas
+X = data[['HOUR', 'DAY_OF_WEEK', 'MONTH']].values
+y = data['Primary Type']
+
+# Codificar las etiquetas
+label_encoder = LabelEncoder()
+y = label_encoder.fit_transform(y)
+
+# Dividir los datos en conjuntos de entrenamiento y prueba
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
+
+# Escalar características
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# Remodelar los datos para cumplir con la entrada esperada por LSTM
+X_train = X_train.reshape((X_train.shape[0], X_train.shape[1], 1))
+X_test = X_test.reshape((X_test.shape[0], X_test.shape[1], 1))
+
+# Construir la red neuronal recurrente (LSTM)
+model = Sequential([
+    Input(shape=(X_train.shape[1], 1)),
+    LSTM(64, activation='relu', return_sequences=True),
+    LSTM(32, activation='relu'),
+    Dense(len(label_encoder.classes_), activation='softmax')
+])
+
+# Compilar el modelo
+model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+
+# Ajustar el modelo y guardar el historial
+history = model.fit(X_train, y_train, epochs=10, batch_size=32, validation_data=(X_test, y_test))
+
+# Visualizar la precisión y la pérdida
+plt.figure(figsize=(14, 5))
+
+# Gráfico de precisión
+plt.subplot(1, 2, 1)
+plt.plot(history.history['accuracy'], label='Entrenamiento')
+plt.plot(history.history['val_accuracy'], label='Validación')
+plt.title('Precisión del modelo')
+plt.xlabel('Épocas')
+plt.ylabel('Precisión')
+plt.legend()
+plt.grid(True)
+
+# Gráfico de pérdida
+plt.subplot(1, 2, 2)
+plt.plot(history.history['loss'], label='Entrenamiento')
+plt.plot(history.history['val_loss'], label='Validación')
+plt.title('Pérdida del modelo')
+plt.xlabel('Épocas')
+plt.ylabel('Pérdida')
+plt.legend()
+plt.grid(True)
+
+# Mostrar los gráficos
+plt.show()
+
+----------------------------2-------------------------------------------------------
+
+
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense, Input
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+
+# Cargar los datos
+data = pd.read_csv('Crimes_-_2024_20241031.csv')
+
+# Preprocesamiento de datos
+data['Date'] = pd.to_datetime(data['Date'], format='%m/%d/%Y %I:%M:%S %p')
+data = data.sort_values(by='Date')
+data['HOUR'] = data['Date'].dt.hour
+data['DAY_OF_WEEK'] = data['Date'].dt.dayofweek
+data['MONTH'] = data['Date'].dt.month
+
+# Seleccionar características y etiquetas
+X = data[['HOUR', 'DAY_OF_WEEK', 'MONTH']].values
+y = data['Primary Type']
+
+# Codificar las etiquetas
+label_encoder = LabelEncoder()
+y = label_encoder.fit_transform(y)
+
+# Dividir los datos en conjuntos de entrenamiento y prueba
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
+
+# Escalar características
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# Remodelar los datos para cumplir con la entrada esperada por LSTM
+X_train = X_train.reshape((X_train.shape[0], X_train.shape[1], 1))
+X_test = X_test.reshape((X_test.shape[0], X_test.shape[1], 1))
+
+# Construir la red neuronal recurrente (LSTM)
+model = Sequential([
+    Input(shape=(X_train.shape[1], 1)),
+    LSTM(64, activation='relu', return_sequences=True),
+    LSTM(32, activation='relu'),
+    Dense(len(label_encoder.classes_), activation='softmax')
+])
+
+# Compilar el modelo
+model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+
+# Ajustar el modelo y guardar el historial
+history = model.fit(X_train, y_train, epochs=10, batch_size=32, validation_data=(X_test, y_test))
+
+# Visualizar la precisión y la pérdida
+plt.figure(figsize=(14, 5))
+
+# Gráfico de precisión
+plt.subplot(1, 2, 1)
+plt.plot(history.history['accuracy'], label='Entrenamiento')
+plt.plot(history.history['val_accuracy'], label='Validación')
+plt.title('Precisión del modelo')
+plt.xlabel('Épocas')
+plt.ylabel('Precisión')
+plt.legend()
+plt.grid(True)
+
+# Gráfico de pérdida
+plt.subplot(1, 2, 2)
+plt.plot(history.history['loss'], label='Entrenamiento')
+plt.plot(history.history['val_loss'], label='Validación')
+plt.title('Pérdida del modelo')
+plt.xlabel('Épocas')
+plt.ylabel('Pérdida')
+plt.legend()
+plt.grid(True)
+
+# Mostrar los gráficos
+plt.show()
+
+-----------------------------------------3-------------------------------------------------
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense, Input
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+
+# Cargar los datos
+data = pd.read_csv('Crimes_-_2024_20241031.csv')
+
+# Preprocesamiento de datos
+data['Date'] = pd.to_datetime(data['Date'], format='%m/%d/%Y %I:%M:%S %p')
+data = data.sort_values(by='Date')
+data['HOUR'] = data['Date'].dt.hour
+data['DAY_OF_WEEK'] = data['Date'].dt.dayofweek
+data['MONTH'] = data['Date'].dt.month
+
+# Seleccionar características y etiquetas
+X = data[['HOUR', 'DAY_OF_WEEK', 'MONTH']].values
+y = data['Primary Type']
+
+# Codificar las etiquetas
+label_encoder = LabelEncoder()
+y = label_encoder.fit_transform(y)
+
+# Dividir los datos en conjuntos de entrenamiento y prueba
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
+
+# Escalar características
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# Remodelar los datos para cumplir con la entrada esperada por LSTM
+X_train = X_train.reshape((X_train.shape[0], X_train.shape[1], 1))
+X_test = X_test.reshape((X_test.shape[0], X_test.shape[1], 1))
+
+# Construir la red neuronal recurrente (LSTM)
+model = Sequential([
+    Input(shape=(X_train.shape[1], 1)),
+    LSTM(64, activation='relu', return_sequences=True),
+    LSTM(32, activation='relu'),
+    Dense(len(label_encoder.classes_), activation='softmax')
+])
+
+# Compilar el modelo
+model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+
+# Ajustar el modelo y guardar el historial
+history = model.fit(X_train, y_train, epochs=10, batch_size=32, validation_data=(X_test, y_test))
+
+# Visualizar la precisión y la pérdida
+plt.figure(figsize=(14, 5))
+
+# Gráfico de precisión
+plt.subplot(1, 2, 1)
+plt.plot(history.history['accuracy'], label='Entrenamiento')
+plt.plot(history.history['val_accuracy'], label='Validación')
+plt.title('Precisión del modelo')
+plt.xlabel('Épocas')
+plt.ylabel('Precisión')
+plt.legend()
+plt.grid(True)
+
+# Gráfico de pérdida
+plt.subplot(1, 2, 2)
+plt.plot(history.history['loss'], label='Entrenamiento')
+plt.plot(history.history['val_loss'], label='Validación')
+plt.title('Pérdida del modelo')
+plt.xlabel('Épocas')
+plt.ylabel('Pérdida')
+plt.legend()
+plt.grid(True)
+
+# Mostrar los gráficos
+plt.show()
+
+---------------------------------------------4--------------------------------------------------------------
+
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Input
+from sklearn.preprocessing import StandardScaler
+
+# Cargar los datos
+data = pd.read_csv('Crimes_-_2024_20241031.csv')
+
+# Seleccionar características y etiquetas
+X = data[['X Coordinate', 'Y Coordinate']].values
+y_latitude = data['Latitude'].values
+y_longitude = data['Longitude'].values
+
+# Dividir los datos en conjuntos de entrenamiento y prueba
+X_train, X_test, y_lat_train, y_lat_test, y_long_train, y_long_test = train_test_split(
+    X, y_latitude, y_longitude, test_size=0.2, random_state=42
+)
+
+# Escalar características
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# Construir la red neuronal profunda (DNN) para latitud
+model_lat = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(64, activation='relu'),
+    Dense(32, activation='relu'),
+    Dense(1)
+])
+
+# Construir la red neuronal profunda (DNN) para longitud
+model_long = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(64, activation='relu'),
+    Dense(32, activation='relu'),
+    Dense(1)
+])
+
+# Compilar los modelos
+model_lat.compile(optimizer='adam', loss='mse')
+model_long.compile(optimizer='adam', loss='mse')
+
+# Ajustar los modelos y guardar los historiales
+history_lat = model_lat.fit(X_train, y_lat_train, epochs=20, batch_size=32, validation_data=(X_test, y_lat_test))
+history_long = model_long.fit(X_train, y_long_train, epochs=20, batch_size=32, validation_data=(X_test, y_long_test))
+
+# Visualizar la pérdida de los modelos
+plt.figure(figsize=(14, 5))
+
+# Gráfico de pérdida del modelo para latitud
+plt.subplot(1, 2, 1)
+plt.plot(history_lat.history['loss'], label='Entrenamiento')
+plt.plot(history_lat.history['val_loss'], label='Validación')
+plt.title('Pérdida del modelo para latitud')
+plt.xlabel('Épocas')
+plt.ylabel('Pérdida')
+plt.legend()
+plt.grid(True)
+
+# Gráfico de pérdida del modelo para longitud
+plt.subplot(1, 2, 2)
+plt.plot(history_long.history['loss'], label='Entrenamiento')
+plt.plot(history_long.history['val_loss'], label='Validación')
+plt.title('Pérdida del modelo para longitud')
+plt.xlabel('Épocas')
+plt.ylabel('Pérdida')
+plt.legend()
+plt.grid(True)
+
+# Mostrar los gráficos
+plt.show()
+
+
+
+
+---------------------------------------5-------------------------
+
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense, Embedding, Input
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from sklearn.preprocessing import LabelEncoder
+import matplotlib.pyplot as plt
+
+# Definir la dimensión del embedding
+embedding_dim = 64
+
+# Cargar los datos
+data = pd.read_csv('Crimes_-_2024_20241031.csv')
+
+# Preprocesamiento de datos
+X_title = data['Primary Type'].astype(str).values
+X_location = data['Location Description'].astype(str).values
+y = data['Description'].values
+
+# Codificar etiquetas
+label_encoder = LabelEncoder()
+y = label_encoder.fit_transform(y)
+
+# Tokenización de texto
+max_len = 50
+vocab_size = 10000  # Número máximo de palabras en el vocabulario
+
+tokenizer = Tokenizer(num_words=vocab_size)
+tokenizer.fit_on_texts(X_title)
+X_title_sequences = tokenizer.texts_to_sequences(X_title)
+
+tokenizer.fit_on_texts(X_location)
+X_location_sequences = tokenizer.texts_to_sequences(X_location)
+
+X_title_padded = pad_sequences(X_title_sequences, maxlen=max_len, padding='post')
+X_location_padded = pad_sequences(X_location_sequences, maxlen=max_len, padding='post')
+
+# Concatenar las características de título y ubicación
+X_combined = np.concatenate((X_title_padded, X_location_padded), axis=1)
+
+# Dividir los datos en conjuntos de entrenamiento y prueba
+X_train, X_test, y_train, y_test = train_test_split(X_combined, y, test_size=0.2, random_state=42)
+
+# Modelo de texto
+model = Sequential([
+    Input(shape=(X_combined.shape[1],)),
+    Embedding(input_dim=vocab_size, output_dim=embedding_dim),
+    LSTM(64, return_sequences=True),
+    LSTM(32),
+    Dense(len(label_encoder.classes_), activation='softmax')
+])
+
+# Compilar el modelo
+model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+
+# Ajustar el modelo y guardar el historial
+history = model.fit(X_train, y_train, epochs=10, batch_size=32, validation_data=(X_test, y_test))
+
+# Visualizar la precisión y la pérdida
+plt.figure(figsize=(14, 5))
+
+# Gráfico de precisión
+plt.subplot(1, 2, 1)
+plt.plot(history.history['accuracy'], label='Entrenamiento')
+plt.plot(history.history['val_accuracy'], label='Validación')
+plt.title('Precisión del modelo')
+plt.xlabel('Épocas')
+plt.ylabel('Precisión')
+plt.legend()
+plt.grid(True)
+
+# Gráfico de pérdida
+plt.subplot(1, 2, 2)
+plt.plot(history.history['loss'], label='Entrenamiento')
+plt.plot(history.history['val_loss'], label='Validación')
+plt.title('Pérdida del modelo')
+plt.xlabel('Épocas')
+plt.ylabel('Pérdida')
+plt.legend()
+plt.grid(True)
+
+# Mostrar los gráficos
+plt.show()
