@@ -1,0 +1,91 @@
+T1
+
+!pip install pandas
+!pip install joblib
+!pip install scikit-learn
+!pip install fastapi
+!pip install uvicorn
+!pip install pycurl
+
+
+------------------1-----------------+
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+import joblib
+from sklearn.preprocessing import LabelEncoder
+# Paso 1: Cargar los datos
+data = pd.read_csv('Crimes_-_2024_20241031.csv')
+# Paso 2: Preprocesamiento de datos
+# Eliminar columnas innecesarias o que no sean útiles para la predicción
+data = data.drop(columns=['Case Number', 'FBI Code', 'X Coordinate', 'Y Coordinate', 'Latitude', 'Longitude', 'Location Description'])
+# Codificar las variables categóricas con LabelEncoder
+label_encoders = {}
+for column in data.select_dtypes(include=['object']).columns:
+   le = LabelEncoder()
+   data[column] = le.fit_transform(data[column])
+   label_encoders[column] = le
+# Dividir los datos en características (X) y etiquetas (y)
+X = data.drop(columns=['Primary Type'])
+y = data['Primary Type']
+# Dividir los datos en conjuntos de entrenamiento y prueba
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+# Paso 3: Entrenamiento del modelo
+model = RandomForestClassifier(random_state=42)
+model.fit(X_train, y_train)
+# Paso 4: Evaluación del modelo
+y_pred = model.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+print("Accuracy:", accuracy)
+# Paso 5: Guardar el modelo entrenado
+joblib.dump(model, 'crime_prediction_model.pkl')
+
+
+----------------2------------------------
+
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+import joblib
+import pandas as pd
+
+# Paso 1: Cargar el modelo entrenado
+model = joblib.load('crime_prediction_model.pkl')
+
+# Paso 2: Definir los modelos de datos para la entrada y salida de la API
+class CrimePredictionInput(BaseModel):
+   Date: str
+   Block: str
+   IUCR: str
+   Location: str
+   Arrest: str
+   Domestic: str
+   Beat: int
+   Ward: int
+class CrimePredictionOutput(BaseModel):
+   Primary_Type: str
+# Paso 3: Inicializar la aplicación FastAPI
+app = FastAPI()
+# Paso 4: Definir el endpoint para hacer predicciones de crimen
+@app.post('/predict/', response_model=CrimePredictionOutput)
+async def predict_crime(data: CrimePredictionInput):
+   # Convertir los datos de entrada en un DataFrame
+   input_data = pd.DataFrame([data.dict()])
+   # Preprocesar los datos de entrada
+   input_data = pd.get_dummies(input_data)
+   # Simulación de las columnas X del entrenamiento para obtener required_columns
+   X = pd.DataFrame(columns=['Date', 'Block', 'IUCR', 'Location', 'Arrest', 'Domestic', 'Beat', 'Ward'])
+   required_columns = set(X.columns)
+   missing_columns = required_columns - set(input_data.columns)
+   for column in missing_columns:
+       input_data[column] = 0
+   # Asegurarse de que las columnas estén en el orden correcto
+   input_data = input_data[X.columns]
+   # Hacer la predicción
+   prediction = model.predict(input_data)
+   # Obtener la descripción primaria del crimen predicho
+   Description = prediction[0]
+   return CrimePredictionOutput(Primary_Type=Description)
+   
+----------------3----------------------
+
